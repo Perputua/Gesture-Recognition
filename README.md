@@ -6,7 +6,7 @@ git clone https://github.com/Perputua/Gesture-Recognition
 https://www.python.org/downloads/release/python-3126/
 
 # Install Req
-python -r install requirements.txt
+python install -r requirements.txt
 
 # Run Program
 python gesture_recognition.py
