@@ -5,7 +5,7 @@ git clone https://github.com/Perputua/Gesture-Recognition
 ### Mediapipe can't run on Python > 3.13
 https://www.python.org/downloads/release/python-3126/
 
-# Install Req
+# Install Requirements
 python install -r requirements.txt
 
 # Run Program
