@@ -37,15 +37,21 @@ gesture_hold_frames = 0
 MIN_HOLD_FRAMES = 10
 
 
-# Function to check if finger is 'in center area' (very basic approximation)
+# Function to check if any finger is 'in center area'
 def is_center_area(hand_landmarks):
-    # Get index fingertip (landmark 8)
-    index_finger_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+    # Check all fingertips
+    fingertips = [
+        hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP],
+        hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP],
+        hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP],
+        hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP],
+        hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP],
+    ]
 
-    # More generous 'center area' detection zone (center-left area where face would be)
-    # Expanded area to make it easier to trigger
-    if 0.35 < index_finger_tip.x < 0.65 and 0.15 < index_finger_tip.y < 0.5:
-        return True
+    # Check if any fingertip is in the center area
+    for fingertip in fingertips:
+        if 0.35 < fingertip.x < 0.65 and 0.15 < fingertip.y < 0.5:
+            return True
     return False
 
 
@@ -144,11 +150,17 @@ def smooth_gesture(gesture):
 
 
 print("=" * 60)
-print("MediaPipe Gesture Recognition - Dual Display")
+print("MediaPipe Gesture Recognition - All Fingertips Detection")
 print("=" * 60)
 print("\nInstructions:")
 print("- Position your hand in front of the camera")
-print("- Try moving your hand to center-top for 'finger in center area'")
+print("- All 5 fingertips will be tracked with different colors:")
+print("  * Thumb - Blue")
+print("  * Index - Yellow")
+print("  * Middle - Green")
+print("  * Ring - Magenta")
+print("  * Pinky - Orange")
+print("- Try moving any fingertip to center area")
 print("- Try pointing gesture (index finger extended)")
 print("- Press 'q' to quit")
 print("\nWindows:")
@@ -210,18 +222,68 @@ while cap.isOpened():
                 mp_draw.DrawingSpec(color=(0, 255, 255), thickness=2),
             )
 
-            # Draw index finger tip position for debugging (scaled for larger window)
-            index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+            # Draw all fingertip positions with different colors and labels
             height, width = camera_display.shape[:2]
-            tip_x = int(index_tip.x * width)
-            tip_y = int(index_tip.y * height)
-            cv2.circle(camera_display, (tip_x, tip_y), 15, (0, 255, 255), -1)
+
+            # Define fingertips with colors and labels
+            fingertips_info = [
+                (mp_hands.HandLandmark.THUMB_TIP, (255, 0, 0), "Thumb"),  # Blue
+                (
+                    mp_hands.HandLandmark.INDEX_FINGER_TIP,
+                    (0, 255, 255),
+                    "Index",
+                ),  # Yellow
+                (
+                    mp_hands.HandLandmark.MIDDLE_FINGER_TIP,
+                    (0, 255, 0),
+                    "Middle",
+                ),  # Green
+                (
+                    mp_hands.HandLandmark.RING_FINGER_TIP,
+                    (255, 0, 255),
+                    "Ring",
+                ),  # Magenta
+                (mp_hands.HandLandmark.PINKY_TIP, (255, 165, 0), "Pinky"),  # Orange
+            ]
+
+            # Track which fingertips are in center zone
+            fingertips_in_zone = []
+
+            for landmark_id, color, label in fingertips_info:
+                fingertip = hand_landmarks.landmark[landmark_id]
+                tip_x = int(fingertip.x * width)
+                tip_y = int(fingertip.y * height)
+
+                # Check if this fingertip is in center zone
+                in_zone = 0.35 < fingertip.x < 0.65 and 0.15 < fingertip.y < 0.5
+
+                # Draw circle for fingertip
+                circle_size = 12
+                if in_zone:
+                    fingertips_in_zone.append(label)
+                    # Make it larger and add green highlight when in zone
+                    cv2.circle(camera_display, (tip_x, tip_y), 20, (0, 255, 0), 3)
+                    circle_size = 15
+
+                cv2.circle(camera_display, (tip_x, tip_y), circle_size, color, -1)
+                cv2.circle(
+                    camera_display, (tip_x, tip_y), circle_size + 3, (255, 255, 255), 2
+                )
+
+                # Draw label above fingertip
+                cv2.putText(
+                    camera_display,
+                    label,
+                    (tip_x - 30, tip_y - 25),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    color,
+                    2,
+                )
 
             # Detect gestures
             if is_center_area(hand_landmarks):
                 detected_gesture = "finger in center area"
-                # Visual feedback when in zone (larger circle for visibility)
-                cv2.circle(camera_display, (tip_x, tip_y), 25, (0, 255, 0), 5)
             elif is_pointing_gesture(hand_landmarks):
                 detected_gesture = "pointing"
 
